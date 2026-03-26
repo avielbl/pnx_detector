@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.uv/
+
+# uv
+uv.lock
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# DL artifacts
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.tflite
+
+# Experiment tracking
+mlruns/
+wandb/
+logs/
+*.log
+
+# Data (keep structure, ignore content)
+data/raw/*
+data/processed/*
+data/splits/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/splits/.gitkeep
+
+# Secrets
+.env
+*.env
+secrets.json
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:docs.bmad-method.org)",
+      "Bash(npx bmad-method:*)",
+      "Bash(find c:/projects/pnx_detector/_bmad/bmad-dl-lifecycle/bmad-dl-scaffold/scripts/__pycache__ -name \"init_project*.pyc\" -delete)"
+    ]
+  }
+}
