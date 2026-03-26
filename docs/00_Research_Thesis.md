@@ -39,10 +39,10 @@ The clinical context involves retrospective cohorts from Guangzhou Women and Chi
 
 ## IV. Data Characterization
 
-*To be populated after EDA (Stage 02)*
+*Updated after EDA — 2026-03-26*
 
-- **Total images:** 5,863 chest X-ray images (JPEG)
-- **Classes:** 2 categories (Pneumonia, Normal)
+- **Total images:** 5,216 chest X-ray images (JPEG)
+- **Classes:** 2 categories (Pneumonia: 3,875 / 74.3%, Normal: 1,341 / 25.7%)
 - **Organization:** train/, test/, val/ folder structure
 - **Source:** Retrospective cohorts from Guangzhou Women and Children's Medical Center, Guangzhou
 - **Patient age range:** 1-5 years old
@@ -53,6 +53,24 @@ The clinical context involves retrospective cohorts from Guangzhou Women and Chi
   - Visual explanations (saliency maps/Grad-CAM) for all predictions
   - Confidence scores (probability 0-1) for each class
   - Inference latency < 5 seconds per image
+
+### EDA Findings
+
+- **Imbalance Status:** Moderate (2.9:1 ratio)
+- **Imbalance Nature:** Enrichment artifact for dataset construction, not real-world prevalence
+- **Validation Set:** Too small (16 images) — will use k-fold cross-validation with combined train+val
+- **Baseline Target:** 80% accuracy (majority classifier achieves 74.3%)
+- **Domain Expert Interpretations:**
+  - Class imbalance is intentional for training, not reflective of real-world statistics
+  - No specific pneumonia subtypes to prioritize (binary classification only)
+  - K-fold cross-validation required due to small validation set
+
+### Constraints on Architecture
+
+- Class weights must be applied during training (inverse frequency weighting)
+- K-fold cross-validation for reliable model evaluation
+- Task requires deep learned features (baseline gap of 5.7% from majority classifier)
+- No subtype differentiation — binary classification only
 
 ## V. Hypothesis History
 
