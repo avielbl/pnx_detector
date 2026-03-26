@@ -8,11 +8,15 @@ dependencies = [
     "torchvision>=0.15",
     "lightning>=2.0",
     "clearml>=1.15",
+    "timm>=0.9",
     "scikit-learn>=1.3",
     "torchmetrics>=1.0",
     "numpy>=1.24",
     "pandas>=2.0",
     "pillow>=10.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.1.0",
+    "matplotlib>=3.10.8",
 ]
 # Dependencies are added in bmad-dl-ideation (Stage 1) and installed
 # in bmad-dl-infra (Stage 5) via: uv sync
