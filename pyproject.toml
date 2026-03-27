@@ -17,6 +17,7 @@ dependencies = [
     "pytest>=9.0.2",
     "pytest-cov>=7.1.0",
     "matplotlib>=3.10.8",
+    "tensorboard>=2.14",
 ]
 # Dependencies are added in bmad-dl-ideation (Stage 1) and installed
 # in bmad-dl-infra (Stage 5) via: uv sync
@@ -33,3 +34,13 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# PyTorch CUDA build - use cu124 index (compatible with CUDA 12.4+, covers 12.5)
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu124" }]
+torchvision = [{ index = "pytorch-cu124" }]

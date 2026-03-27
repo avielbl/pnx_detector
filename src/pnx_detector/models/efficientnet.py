@@ -128,9 +128,11 @@ class PneumoniaModel(LightningModule):
         logits = self(images)
         loss = self.criterion(logits, labels)
 
+        preds = torch.argmax(logits, dim=1)
+
         # Log training metrics
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("train/acc", self.train_accuracy(logits, labels), on_step=True, on_epoch=True, prog_bar=False)
+        self.log("train/acc", self.train_accuracy(preds, labels), on_step=True, on_epoch=True, prog_bar=False)
 
         if torch.cuda.is_available():
             self.log("gpu/memory_allocated_gb", torch.cuda.memory_allocated() / 1e9, on_step=True, on_epoch=False, prog_bar=False)
@@ -142,18 +144,16 @@ class PneumoniaModel(LightningModule):
         images, labels = batch
         logits = self(images)
         loss = self.criterion(logits, labels)
-
-        # Log validation metrics
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/acc", self.val_accuracy(logits, labels), on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/precision", self.val_precision(logits, labels), on_step=False, on_epoch=True, prog_bar=False)
-        self.log("val/recall", self.val_recall(logits, labels), on_step=False, on_epoch=True, prog_bar=False)
-        self.log("val/f1", self.val_f1(logits, labels), on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/auroc", self.val_auroc(logits, labels), on_step=False, on_epoch=True, prog_bar=False)
-
-        # Store predictions for sensitivity/specificity calculation
         probs = torch.softmax(logits, dim=1)
         preds = torch.argmax(probs, dim=1)
+
+        # Log validation metrics (pass probs to AUROC; others accept logits/preds)
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/acc", self.val_accuracy(preds, labels), on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/precision", self.val_precision(preds, labels), on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val/recall", self.val_recall(preds, labels), on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val/f1", self.val_f1(preds, labels), on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/auroc", self.val_auroc(probs, labels), on_step=False, on_epoch=True, prog_bar=False)
 
         self.val_predictions.append(preds)
         self.val_labels.append(labels)
