@@ -72,6 +72,10 @@ class PneumoniaModel(LightningModule):
         self.val_predictions = []
         self.val_labels = []
 
+        # For test metrics
+        self.test_predictions = []
+        self.test_labels = []
+
         self.save_hyperparameters(ignore=["class_weights"])
 
     def _load_backbone(self) -> None:
@@ -128,6 +132,9 @@ class PneumoniaModel(LightningModule):
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log("train/acc", self.train_accuracy(logits, labels), on_step=True, on_epoch=True, prog_bar=False)
 
+        if torch.cuda.is_available():
+            self.log("gpu/memory_allocated_gb", torch.cuda.memory_allocated() / 1e9, on_step=True, on_epoch=False, prog_bar=False)
+
         return loss
 
     def validation_step(self, batch, batch_idx: int) -> None:
@@ -157,13 +164,12 @@ class PneumoniaModel(LightningModule):
         all_preds = torch.cat(self.val_predictions)
         all_labels = torch.cat(self.val_labels)
 
-        # Calculate sensitivity (recall for positive class) and specificity
-        # For binary classification, we need per-class metrics
+        # Calculate sensitivity (recall for PNEUMONIA class=1) and specificity (recall for NORMAL class=0)
+        # Use fresh per-class Recall metric to avoid double-accumulation into val_recall state
         if self.num_classes == 2:
-            # Sensitivity = Recall for class 1 (PNEUMONIA)
-            sensitivity = self.val_recall(all_preds, all_labels)
-            # Specificity = Recall for class 0 (NORMAL)
-            specificity = Recall(task="multiclass", num_classes=2, average=None)(all_preds, all_labels)[0]
+            per_class_recall = Recall(task="multiclass", num_classes=2, average=None)(all_preds, all_labels)
+            sensitivity = per_class_recall[1]  # PNEUMONIA recall
+            specificity = per_class_recall[0]  # NORMAL recall
 
             self.log("val/sensitivity", sensitivity, on_step=False, on_epoch=True, prog_bar=True)
             self.log("val/specificity", specificity, on_step=False, on_epoch=True, prog_bar=True)

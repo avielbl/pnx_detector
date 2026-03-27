@@ -75,16 +75,16 @@
 
 | Item | Status |
 | :--- | :--- |
-| INF-001 (DataLoader) implemented and smoke tested | Pending |
-| INF-002 (ClearML tracking) configured | Pending |
-| INF-003 (EfficientNet-B4 model) implemented | Pending |
-| INF-004 (Evaluation harness) implemented | Pending |
-| INF-005 (Inference engine) implemented | Pending |
-| Class weights verified (NORMAL=1.94, PNEUMONIA=0.67) | Pending |
-| ClearML project created and accessible | Pending |
-| GPU hardware available (RTX 3080+ or equivalent) | Pending |
+| INF-001 (DataLoader) implemented and smoke tested | ✅ Complete |
+| INF-002 (ClearML tracking) configured | ✅ Complete |
+| INF-003 (EfficientNet-B4 model) implemented | ✅ Complete |
+| INF-004 (Evaluation harness) implemented | ✅ Complete |
+| INF-005 (Inference engine) implemented | ✅ Complete |
+| Class weights verified (NORMAL=1.94, PNEUMONIA=0.67) | ✅ Complete |
+| ClearML project created and accessible | ⚠️ Optional — graceful fallback if not configured |
+| GPU hardware available (RTX 3080+ or equivalent) | ⚠️ Check at runtime — CPU fallback with warning |
 
 ---
 
-*Document Status: Approved — TECHSPEC signed off*
-*Next Step: Stage 5 (Infrastructure Build) — execute INF-* tasks*
+*Document Status: ✅ Ready for Stage 6 — all INF-* tasks complete, smoke tests pass*
+*Next Step: Stage 6 (Training Experiment) — execute EXP-001*
