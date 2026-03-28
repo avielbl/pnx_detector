@@ -21,7 +21,7 @@
 
 | Task ID | Assigned Agent | Task Description | Linked Req | Dependencies | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `EXP-001` | `Model-Agent` + `Data-Agent` | Baseline training run: Train EfficientNet-B4 with class weights only (no HPO). Goal: confirm architecture can learn the task with heavy augmentation. | `REQ-PERF-01`, `REQ-PERF-02` | All INF-* complete, TECHSPEC signed off | Pending |
+| `EXP-001` | `Model-Agent` + `Data-Agent` | Baseline training run: Train EfficientNet-B4 with class weights only (no HPO). Goal: confirm architecture can learn the task with heavy augmentation. | `REQ-PERF-01`, `REQ-PERF-02` | All INF-* complete, TECHSPEC signed off | ✅ Complete — INCONCLUSIVE (sens=0.921, spec=0.979) |
 | `EXP-002` | `Model-Agent` | Sensitivity-focused training: Adjust threshold and loss weighting to prioritize recall. Goal: achieve >95% sensitivity on test set. | `REQ-PERF-01` | `EXP-001` + Analysis | Pending |
 | `EXP-003` | `Model-Agent` | Specificity-focused training: Calibrate decision threshold to minimize false positives. Goal: achieve >95% specificity on test set. | `REQ-PERF-02` | `EXP-002` + Analysis | Pending |
 | `EXP-004` | `Model-Agent` + `MLOps-Agent` | K-fold cross-validation ensemble: Train 5 models with different seeds, ensemble predictions via averaging. Goal: robust performance estimate. | `REQ-DATA-02` | `EXP-003` + Analysis | Pending |
@@ -108,5 +108,6 @@ EXP-001 (Baseline Training) ← All INF-* complete
 | TECHSPEC ID | Status | Date Signed |
 | :--- | :--- | :--- |
 | `TECHSPEC_EXP_001` | ✅ Approved | 2026-03-26 |
+| `TECHSPEC_EXP_002` | ✅ Approved | 2026-03-28 |
 
 *All INF-* tasks must be completed and smoke-tested before executing EXP-001.*
