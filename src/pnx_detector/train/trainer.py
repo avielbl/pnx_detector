@@ -219,13 +219,28 @@ def run_training_experiment(
 
     checkpoint_dir = Path("checkpoints") / exp_id / run_name
     if checkpoint_dir.exists():
-        checkpoints = list(checkpoint_dir.glob("best_*.ckpt"))
+        # rglob because Lightning creates val/f1=*.ckpt in a subdirectory when metric has /
+        checkpoints = [p for p in checkpoint_dir.rglob("*.ckpt") if p.name != "last.ckpt"]
         if checkpoints:
-            # Find checkpoint with best F1
-            best_checkpoint = max(checkpoints, key=lambda x: float(x.stem.split("_")[-1]))
+            # Parse F1 from filename stem (e.g. "f1=0.8204")
+            def _parse_f1(p: Path) -> float:
+                for part in p.name.replace(".ckpt", "").split("="):
+                    try:
+                        return float(part)
+                    except ValueError:
+                        pass
+                return 0.0
+
+            best_checkpoint = max(checkpoints, key=_parse_f1)
             checkpoint_path = str(best_checkpoint)
-            best_f1 = float(best_checkpoint.stem.split("_")[-1])
-            best_epoch = int(best_checkpoint.stem.split("epoch_")[-1].split("_")[0])
+            best_f1 = _parse_f1(best_checkpoint)
+            # epoch from parent dirs or filename (e.g. best_epoch=02_val/f1=0.86.ckpt)
+            for part in best_checkpoint.parts:
+                if "epoch=" in part:
+                    try:
+                        best_epoch = int(part.split("epoch=")[-1].split("_")[0])
+                    except ValueError:
+                        pass
 
     # Evaluate on validation set
     print("\nEvaluating on validation set...")
