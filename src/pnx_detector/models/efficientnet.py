@@ -66,7 +66,8 @@ class PneumoniaModel(LightningModule):
         self.val_precision = Precision(task="multiclass", num_classes=num_classes, average="micro")
         self.val_recall = Recall(task="multiclass", num_classes=num_classes, average="micro")
         self.val_f1 = F1Score(task="multiclass", num_classes=num_classes, average="micro")
-        self.val_auroc = AUROC(task="multiclass", num_classes=num_classes)
+        # Binary AUROC: pass probs[:, 1] (PNEUMONIA probability)
+        self.val_auroc = AUROC(task="binary")
 
         # For sensitivity/specificity calculation
         self.val_predictions = []
@@ -153,7 +154,7 @@ class PneumoniaModel(LightningModule):
         self.log("val/precision", self.val_precision(preds, labels), on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/recall", self.val_recall(preds, labels), on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/f1", self.val_f1(preds, labels), on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/auroc", self.val_auroc(probs, labels), on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val/auroc", self.val_auroc(probs[:, 1], labels), on_step=False, on_epoch=True, prog_bar=False)
 
         self.val_predictions.append(preds)
         self.val_labels.append(labels)
@@ -167,7 +168,8 @@ class PneumoniaModel(LightningModule):
         # Calculate sensitivity (recall for PNEUMONIA class=1) and specificity (recall for NORMAL class=0)
         # Use fresh per-class Recall metric to avoid double-accumulation into val_recall state
         if self.num_classes == 2:
-            per_class_recall = Recall(task="multiclass", num_classes=2, average=None)(all_preds, all_labels)
+            device = all_preds.device
+            per_class_recall = Recall(task="multiclass", num_classes=2, average=None).to(device)(all_preds, all_labels)
             sensitivity = per_class_recall[1]  # PNEUMONIA recall
             specificity = per_class_recall[0]  # NORMAL recall
 
@@ -192,14 +194,18 @@ class PneumoniaModel(LightningModule):
         """Compute metrics at test epoch end."""
         all_preds = torch.cat(self.test_predictions)
         all_labels = torch.cat(self.test_labels)
+        device = all_preds.device
 
-        accuracy = Accuracy(task="multiclass", num_classes=self.num_classes)(all_preds, all_labels)
-        f1 = F1Score(task="multiclass", num_classes=self.num_classes, average="micro")(all_preds, all_labels)
-        auroc = AUROC(task="multiclass", num_classes=self.num_classes)(all_preds, all_labels)
+        accuracy = Accuracy(task="multiclass", num_classes=self.num_classes).to(device)(all_preds, all_labels)
+        f1 = F1Score(task="multiclass", num_classes=self.num_classes, average="micro").to(device)(all_preds, all_labels)
 
         self.log("test/accuracy", accuracy, prog_bar=True)
         self.log("test/f1", f1, prog_bar=True)
-        self.log("test/auroc", auroc, prog_bar=True)
+
+        if self.num_classes == 2:
+            per_class_recall = Recall(task="multiclass", num_classes=2, average=None).to(device)(all_preds, all_labels)
+            self.log("test/sensitivity", per_class_recall[1], prog_bar=True)
+            self.log("test/specificity", per_class_recall[0], prog_bar=True)
 
         # Clear buffers
         self.test_predictions.clear()
