@@ -45,17 +45,29 @@
 | EXP-001_baseline (fold 3) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Pending |
 | EXP-001_baseline (fold 4) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Pending |
 
-### 3-Epoch GPU Probe Results (fold 0, before full run)
+### GPU Probe Results (fold 0, bs=16, 3 epochs — confirmed loop correct)
 
-Pre-run probe confirmed training loop correctness:
-
-| Epoch | val/acc | val/sensitivity | val/specificity | val/loss |
+| Epoch | val/f1 | val/sensitivity | val/specificity | val/loss |
 | :--- | :--- | :--- | :--- | :--- |
 | 0 | 0.820 | 0.763 | 0.985 | 0.467 |
 | 1 | 0.829 | 0.775 | 0.985 | 0.400 |
 | 2 | 0.858 | 0.812 | 0.989 | 0.339 |
 
-*Trend: Model learning rapidly from scratch. Sensitivity improving 76%->81% in 3 epochs. Specificity high from start (model sees more PNEUMONIA samples via weighted sampler).*
+**Timing:** 958s (~16 min) for 3 epochs on GTX 1650. Estimated full run: ~4.4h/fold × 5 = ~22 GPU-hours (within 40h budget).
+
+**AUROC note:** val/auroc column in CSV shows ~0.02 (per-batch average of single-class batches = 0). Actual AUROC from checkpoint = **0.9648** (confirmed via sklearn). Fixed in latest code (accumulated epoch-end computation).
+
+### Full Run Progress — fold 0 (live)
+
+| Epoch | val/f1 | val/sensitivity | val/specificity | val/loss |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 0.835 | 0.785 | 0.978 | 0.426 |
+| 1 | 0.840 | 0.792 | 0.978 | 0.380 |
+| 2 | 0.861 | 0.816 | 0.989 | 0.338 |
+| 3 | 0.879 | 0.842 | 0.985 | 0.335 |
+| ... | TBD | TBD | TBD | TBD |
+
+*Trend: Sensitivity improving rapidly (+5.7pp in 4 epochs). Specificity stable ~0.978-0.989. Model well above majority-class baseline (74.3%).*
 
 ---
 
@@ -66,12 +78,12 @@ Pre-run probe confirmed training loop correctness:
 | `test_predictions` AttributeError | Crash on test_step | Buffers never initialized in `__init__` | Added `self.test_predictions = []; self.test_labels = []` |
 | Wrong sensitivity metric | `val/sensitivity` = micro-recall = accuracy | Used `Recall(average="micro")` which equals accuracy for multiclass | Use fresh `Recall(average=None)[1]` (per-class recall for PNEUMONIA) |
 | Metric device mismatch | RuntimeError on GPU | Fresh `Recall()` created on CPU, tensors on CUDA | Added `.to(device)` |
-| AUROC ~0.02 | Near-zero AUROC despite 82% accuracy | `AUROC(task="multiclass", num_classes=2)` incompatible with binary problem | Switch to `AUROC(task="binary")` with `probs[:,1]` |
+| AUROC ~0.02 in CSV | Near-zero AUROC despite 82% accuracy | Lightning averages per-batch AUROC scalars; single-class batches return 0 | Accumulate probs[:,1] in val_prob_positives buffer; compute in on_validation_epoch_end |
 | OOM at batch_size=32 | CUDA out of memory | GTX 1650 has only 4.3GB VRAM, bs=32 exceeds it | Reduce to bs=16 (3.9GB/4.3GB peak) |
 | Unicode crash on Windows | `UnicodeEncodeError` in trainer.py | Em-dash and arrow characters (U+2014, U+2192) in print statements | Replace with ASCII `--` and `->` |
 | torch CPU-only | No GPU detected | PyPI torch is CPU-only by default | Configure `[tool.uv.sources]` with pytorch-cu124 index |
 
 ---
 
-*Status: Full run launching — to be updated when folds complete*
+*Status: Fold 0 running (epoch 3+), folds 1-4 queued*
 *Next Step: Stage 7 (Analysis) after all 5 folds complete*
