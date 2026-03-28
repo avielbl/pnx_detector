@@ -66,12 +66,10 @@ class PneumoniaModel(LightningModule):
         self.val_precision = Precision(task="multiclass", num_classes=num_classes, average="micro")
         self.val_recall = Recall(task="multiclass", num_classes=num_classes, average="micro")
         self.val_f1 = F1Score(task="multiclass", num_classes=num_classes, average="micro")
-        # Binary AUROC: pass probs[:, 1] (PNEUMONIA probability)
-        self.val_auroc = AUROC(task="binary")
-
-        # For sensitivity/specificity calculation
+        # For sensitivity/specificity/AUROC at epoch end (avoids per-batch averaging artifacts)
         self.val_predictions = []
         self.val_labels = []
+        self.val_prob_positives = []  # probs[:,1] for binary AUROC
 
         # For test metrics
         self.test_predictions = []
@@ -148,37 +146,39 @@ class PneumoniaModel(LightningModule):
         probs = torch.softmax(logits, dim=1)
         preds = torch.argmax(probs, dim=1)
 
-        # Log validation metrics (pass probs to AUROC; others accept logits/preds)
+        # Log step-level validation metrics (accumulate via TorchMetrics state)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/acc", self.val_accuracy(preds, labels), on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/precision", self.val_precision(preds, labels), on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/recall", self.val_recall(preds, labels), on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/f1", self.val_f1(preds, labels), on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/auroc", self.val_auroc(probs[:, 1], labels), on_step=False, on_epoch=True, prog_bar=False)
 
+        # Accumulate for epoch-end metrics (AUROC, sensitivity, specificity)
         self.val_predictions.append(preds)
         self.val_labels.append(labels)
+        self.val_prob_positives.append(probs[:, 1])
 
     def on_validation_epoch_end(self) -> None:
-        """Compute sensitivity and specificity at epoch end."""
-        # Concatenate all predictions and labels
+        """Compute epoch-level metrics (AUROC, sensitivity, specificity) from accumulated data."""
         all_preds = torch.cat(self.val_predictions)
         all_labels = torch.cat(self.val_labels)
+        all_probs1 = torch.cat(self.val_prob_positives)
+        device = all_preds.device
 
-        # Calculate sensitivity (recall for PNEUMONIA class=1) and specificity (recall for NORMAL class=0)
-        # Use fresh per-class Recall metric to avoid double-accumulation into val_recall state
         if self.num_classes == 2:
-            device = all_preds.device
+            # Per-class recall: sensitivity=PNEUMONIA(1), specificity=NORMAL(0)
             per_class_recall = Recall(task="multiclass", num_classes=2, average=None).to(device)(all_preds, all_labels)
-            sensitivity = per_class_recall[1]  # PNEUMONIA recall
-            specificity = per_class_recall[0]  # NORMAL recall
+            self.log("val/sensitivity", per_class_recall[1], on_step=False, on_epoch=True, prog_bar=True)
+            self.log("val/specificity", per_class_recall[0], on_step=False, on_epoch=True, prog_bar=True)
 
-            self.log("val/sensitivity", sensitivity, on_step=False, on_epoch=True, prog_bar=True)
-            self.log("val/specificity", specificity, on_step=False, on_epoch=True, prog_bar=True)
+            # Binary AUROC on full epoch data (avoids per-batch averaging on single-class batches)
+            auroc = AUROC(task="binary").to(device)(all_probs1, all_labels)
+            self.log("val/auroc", auroc, on_step=False, on_epoch=True, prog_bar=False)
 
         # Clear buffers
         self.val_predictions.clear()
         self.val_labels.clear()
+        self.val_prob_positives.clear()
 
     def test_step(self, batch, batch_idx: int) -> None:
         """Test step."""
