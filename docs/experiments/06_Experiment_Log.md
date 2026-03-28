@@ -39,11 +39,12 @@
 
 | Run Name | Config | val/f1 | val/sensitivity | val/specificity | Best Epoch | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| EXP-001_baseline (fold 0) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Running |
-| EXP-001_baseline (fold 1) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Pending |
-| EXP-001_baseline (fold 2) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Pending |
-| EXP-001_baseline (fold 3) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Pending |
-| EXP-001_baseline (fold 4) | lr=1e-4, bs=16 | TBD | TBD | TBD | TBD | Pending |
+| EXP-001_baseline (fold 0) | lr=1e-4, bs=16 | 0.939 | 0.920 | 0.993 | 18 | Complete |
+| EXP-001_baseline (fold 1) | lr=1e-4, bs=16 | 0.932 | 0.918 | 0.974 | 20 | Complete |
+| EXP-001_baseline (fold 2) | lr=1e-4, bs=16 | 0.939 | 0.923 | 0.985 | 23 | Complete |
+| EXP-001_baseline (fold 3) | lr=1e-4, bs=16 | 0.928 | 0.910 | 0.981 | 21 | Complete |
+| EXP-001_baseline (fold 4) | lr=1e-4, bs=16 | 0.925 | 0.905 | 0.985 | 21 | Complete |
+| **Mean** | | **0.933** | **0.915** | **0.984** | — | — |
 
 ### GPU Probe Results (fold 0, bs=16, 3 epochs — confirmed loop correct)
 
@@ -57,17 +58,18 @@
 
 **AUROC note:** val/auroc column in CSV shows ~0.02 (per-batch average of single-class batches = 0). Actual AUROC from checkpoint = **0.9648** (confirmed via sklearn). Fixed in latest code (accumulated epoch-end computation).
 
-### Full Run Progress — fold 0 (live)
+### Full Run Progress — fold 0 (complete, 30 epochs, early stop at ep18)
 
 | Epoch | val/f1 | val/sensitivity | val/specificity | val/loss |
 | :--- | :--- | :--- | :--- | :--- |
 | 0 | 0.835 | 0.785 | 0.978 | 0.426 |
-| 1 | 0.840 | 0.792 | 0.978 | 0.380 |
-| 2 | 0.861 | 0.816 | 0.989 | 0.338 |
 | 3 | 0.879 | 0.842 | 0.985 | 0.335 |
-| ... | TBD | TBD | TBD | TBD |
+| 9 | 0.904 | 0.876 | 0.985 | 0.236 |
+| 13 | 0.922 | 0.898 | 0.989 | 0.203 |
+| **18** | **0.939** | **0.920** | **0.993** | **0.158** |
+| 29 | 0.933 | 0.911 | 0.996 | 0.180 |
 
-*Trend: Sensitivity improving rapidly (+5.7pp in 4 epochs). Specificity stable ~0.978-0.989. Model well above majority-class baseline (74.3%).*
+*Training curves: `docs/experiments/training_curves_fold0.png` through `training_curves_fold4.png`*
 
 ---
 
@@ -85,5 +87,5 @@
 
 ---
 
-*Status: Fold 0 running (epoch 3+), folds 1-4 queued*
-*Next Step: Stage 7 (Analysis) after all 5 folds complete*
+*Status: All 5 folds complete. TECHSPEC tier: Worst case alive (sensitivity 0.915, target 0.95; specificity 0.984, target 0.95).*
+*Next Step: Stage 7 (Analysis) — docs/experiments/07_Analysis_EXP_001.md*
