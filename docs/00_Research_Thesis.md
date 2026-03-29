@@ -76,4 +76,5 @@ The clinical context involves retrospective cohorts from Guangzhou Women and Chi
 
 | Version | Hypothesis | Experiment | Outcome | Domain Expert Sign-off |
 | :--- | :--- | :--- | :--- | :--- |
-| H-001 | Using a convolutional neural network architecture trained on 5,863 quality-controlled pediatric chest X-ray images will achieve >95% sensitivity and specificity for pneumonia detection | EXP-001 | **INCONCLUSIVE** — EfficientNet-B4 from scratch: mean sensitivity=0.921, specificity=0.979 across 5 folds. Specificity target met; sensitivity 3.5pp short. Threshold tuning and transfer learning queued as EXP-002. | 2026-03-28 |
+| H-001 | Using a convolutional neural network architecture trained on 5,863 quality-controlled pediatric chest X-ray images will achieve >95% sensitivity and specificity for pneumonia detection | EXP-001 | **INCONCLUSIVE** — EfficientNet-B4 from scratch: mean sensitivity=0.921, specificity=0.979 across 5 folds (k-fold val set). Sensitivity 3.5pp short. Threshold tuning queued (EXP-002). | 2026-03-28 |
+| H-001 | (continued) | EXP-002 | **INCONCLUSIVE** — Threshold tuning: test set sens=0.962 ✅, spec=0.786 ❌. Transfer learning (pretrained): test set sens=0.956 ✅, spec=0.868 ❌. Sensitivity target met; specificity fails on held-out test set due to distribution shift in NORMAL cases. AUROC=0.960. | 2026-03-29 |
