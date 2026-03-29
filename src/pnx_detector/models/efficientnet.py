@@ -25,6 +25,7 @@ class PneumoniaModel(LightningModule):
         dropout: float = 0.3,
         class_weights: Optional[torch.Tensor] = None,
         num_frozen_layers: int = 0,
+        pretrained: bool = False,
     ):
         """Initialize the model.
 
@@ -35,6 +36,7 @@ class PneumoniaModel(LightningModule):
             dropout: Dropout rate for the classification head
             class_weights: Weights for handling class imbalance
             num_frozen_layers: Number of layers to freeze from backbone (0 = train from scratch)
+            pretrained: Whether to use ImageNet pretrained weights (True for transfer learning)
         """
         super().__init__()
 
@@ -44,6 +46,7 @@ class PneumoniaModel(LightningModule):
         self.dropout = dropout
         self.class_weights = class_weights
         self.num_frozen_layers = num_frozen_layers
+        self.pretrained = pretrained
 
         # Load EfficientNet-B4
         self._load_backbone()
@@ -87,10 +90,9 @@ class PneumoniaModel(LightningModule):
                 "Install with: uv add timm"
             )
 
-        # Load EfficientNet-B4 trained from scratch (not pretrained)
         self.backbone = timm.create_model(
             "efficientnet_b4",
-            pretrained=False,
+            pretrained=self.pretrained,
             num_classes=0,  # Remove default classifier for feature extraction
             drop_rate=0.2,
         )

@@ -1,18 +1,18 @@
-"""Stratified k-fold DataLoader for pneumonia detection.
+"""DataLoader for pneumonia detection.
 
-Implements INF-001: Stratified k-fold DataLoader with augmentation pipeline
-from EDA findings. Applies class weights (NORMAL=1.94, PNEUMONIA=0.67).
+Implements INF-001: Stratified k-fold and fixed-split DataLoader with
+augmentation pipeline from EDA findings. Applies class weights
+(NORMAL=1.94, PNEUMONIA=0.67).
 """
 
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
 import numpy as np
 
 
@@ -59,9 +59,12 @@ class PneumoniaDataset(Dataset):
 
 
 class PneumoniaDataModule(LightningDataModule):
-    """LightningDataModule for pneumonia detection with stratified k-fold.
+    """LightningDataModule for pneumonia detection.
 
-    Implements INF-001: Stratified k-fold DataLoader with augmentation pipeline.
+    Supports two split modes:
+    - "kfold": Stratified k-fold on combined train+val directories (EXP-001)
+    - "fixed": Fixed 70/20/10 train/val/test split on combined train+val directories
+               with existing test/ directory as the held-out test set (EXP-002+)
     """
 
     def __init__(
@@ -74,6 +77,7 @@ class PneumoniaDataModule(LightningDataModule):
         random_state: int = 42,
         train_transforms: Optional[transforms.Compose] = None,
         val_transforms: Optional[transforms.Compose] = None,
+        split_mode: str = "kfold",
     ):
         """Initialize the data module.
 
@@ -82,12 +86,17 @@ class PneumoniaDataModule(LightningDataModule):
             train_batch_size: Batch size for training
             val_batch_size: Batch size for validation
             num_workers: Number of workers for data loading
-            num_splits: Number of stratified k-fold splits
+            num_splits: Number of stratified k-fold splits (kfold mode only)
             random_state: Random seed for reproducibility
             train_transforms: Training transforms (uses default if None)
             val_transforms: Validation transforms (uses default if None)
+            split_mode: "kfold" for stratified k-fold (EXP-001) or
+                        "fixed" for 70/20/10 fixed split (EXP-002+)
         """
         super().__init__()
+
+        if split_mode not in ("kfold", "fixed"):
+            raise ValueError(f"split_mode must be 'kfold' or 'fixed', got {split_mode!r}")
 
         self.data_dir = Path(data_dir)
         self.train_batch_size = train_batch_size
@@ -95,6 +104,7 @@ class PneumoniaDataModule(LightningDataModule):
         self.num_workers = num_workers
         self.num_splits = num_splits
         self.random_state = random_state
+        self.split_mode = split_mode
 
         self.train_transforms = train_transforms
         self.val_transforms = val_transforms
@@ -137,19 +147,36 @@ class PneumoniaDataModule(LightningDataModule):
         self.all_paths = np.array(all_paths)
         self.all_labels = np.array(all_labels)
 
-        # Create stratified k-fold splits
-        self.skf = StratifiedKFold(
-            n_splits=self.num_splits,
-            shuffle=True,
-            random_state=self.random_state,
-        )
-
-        # Store fold indices
-        self.fold_indices = list(self.skf.split(self.all_paths, self.all_labels))
+        if self.split_mode == "kfold":
+            skf = StratifiedKFold(
+                n_splits=self.num_splits,
+                shuffle=True,
+                random_state=self.random_state,
+            )
+            self.fold_indices = list(skf.split(self.all_paths, self.all_labels))
+        else:
+            # Fixed 70/20/10 split: split combined train+val pool into 77.8%/22.2%
+            # (train+val dirs = ~90% of total; existing test/ dir is the ~10% held-out set)
+            # 77.8% of 90% = 70% of total; 22.2% of 90% = 20% of total
+            sss = StratifiedShuffleSplit(
+                n_splits=1,
+                test_size=2 / 9,  # 20/(70+20) = 22.2% -> val
+                random_state=self.random_state,
+            )
+            self.train_indices, self.val_indices = next(
+                sss.split(self.all_paths, self.all_labels)
+            )
+            n_train = len(self.train_indices)
+            n_val = len(self.val_indices)
+            print(f"Fixed split: train={n_train} ({n_train/len(self.all_labels):.1%}), "
+                  f"val={n_val} ({n_val/len(self.all_labels):.1%})")
 
     def train_dataloader(self) -> DataLoader:
-        """Create training dataloader for current fold."""
-        train_idx = self.fold_indices[self.current_fold][0]
+        """Create training dataloader."""
+        if self.split_mode == "fixed":
+            train_idx = self.train_indices
+        else:
+            train_idx = self.fold_indices[self.current_fold][0]
 
         dataset = PneumoniaDataset(
             image_paths=self.all_paths[train_idx].tolist(),
@@ -173,8 +200,11 @@ class PneumoniaDataModule(LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
-        """Create validation dataloader for current fold."""
-        val_idx = self.fold_indices[self.current_fold][1]
+        """Create validation dataloader."""
+        if self.split_mode == "fixed":
+            val_idx = self.val_indices
+        else:
+            val_idx = self.fold_indices[self.current_fold][1]
 
         dataset = PneumoniaDataset(
             image_paths=self.all_paths[val_idx].tolist(),
